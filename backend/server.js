@@ -1,7 +1,5 @@
 const express = require("express");
 const pool = require("./config/db");
-const createUserTable = require("./models/User");
-const createNotes = require("./models/Notes");
 const app = express();
 app.use(express.json()); //this is middleware function which is necessary for getting any request object in backend on some end point
 
@@ -12,8 +10,6 @@ async function startServer() {
   try {
     const connection = await pool.getConnection();
     console.log("Connected to MySQL database on port 3307");
-    await createUserTable();
-    await createNotes();
     connection.release();
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
