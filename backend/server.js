@@ -24,7 +24,7 @@ app.get("/", (req, res) => {
   res.send("Server is running!");
 });
 
-const notes = require("./routes/notes");
-const auth = require("./routes/auth");
+const notes = require("./routes/notesRouter");
+const auth = require("./routes/authRouter");
 app.use("/api/notes", notes);
 app.use("/api/auth", auth);
