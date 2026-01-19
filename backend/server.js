@@ -28,3 +28,4 @@ const notes = require("./routes/notesRouter");
 const auth = require("./routes/authRouter");
 app.use("/api/notes", notes);
 app.use("/api/auth", auth);
+// app.use("/",webRoute);

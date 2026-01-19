@@ -2,19 +2,82 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
-const sendmail = require("../helpers/sendMail");
+const sendMail = require("../helpers/sendMail");
 const { validationResult } = require("express-validator");
 dotenv.config();
 const jwt_secret = process.env.JWT_SECRET;
+exports.getOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const [existing] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+    if (existing.length > 0) {
+      return res.status(400).json({ mssg: "You are already register" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+    const expires_in = new Date(Date.now() + 5 * 60000);
+    await db.execute(
+      "REPLACE INTO otp_verification (email , otp , expires_in) VALUES (?,?,?)",
+      [email, hashedOtp, expires_in],
+    );
+    let content = `<p>Hii your OTP For registering to the Inotebook the digital cloud based notebook in your Hand is ${otp} </p>
+  <p>Kindly <b> Do Not </b> Share This OTP to anyone`;
+    sendMail(email, "verify Your Mail", content);
+    res
+      .status(200)
+      .json({ message: "OTP Sent To This Email Kindly Check your Email" });
+  } catch (error) {
+    res.status(400).json({ error: "Internal Error" });
+  }
+};
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const [rows] = await db.execute(
+      "SELECT * FROM otp_verification WHERE email = ?",
+      [email],
+    );
+    if (rows.length === 0) {
+      return res.status(400).json({ message: "Request a Otp first!" });
+    }
+    const { otp: savedOtp, expires_in } = rows[0];
+    if (new Date() > new Date(expires_in))
+      return res.status(400).json({ message: "Otp Expired!" });
+    const ismatch = await bcrypt.compare(otp, savedOtp);
+    if (!ismatch)
+      return res.status(400).json({ message: "OTP is NOT Matched" });
+    const token = jwt.sign({ email }, jwt_secret, { expiresIn: "5m" });
+    await db.execute("DELETE FROM otp_verification WHERE email = ?", [email]);
+    await db.execute("UPDATE users SET is_verified = 1 WHERE email = ?", [
+      email,
+    ]);
+    res.status(200).json({ token, message: "Email Verified successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.register = async (req, res) => {
   const err = validationResult(req);
   if (!err.isEmpty()) {
     return res.status(400).json({ err: err.array() });
   }
 
-  const { name, email, password } = req.body;
+  const { name, password, token } = req.body;
 
   try {
+    const decoded = jwt.verify(token, jwt_secret);
+    const email = decoded.email;
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+    if (rows.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "User is already Registered You Can login" });
+    }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -23,14 +86,7 @@ exports.register = async (req, res) => {
     const [result] = await db.execute(sql, [name, email, hashedPassword]);
 
     const payload = { user: { id: result.insertId } };
-    const authToken = jwt.sign(payload, jwt_secret, { expiresIn: "24h" });
-
-    // 2. Prepare Email Content (HTML)
-    let mailSubject = "Mail Verification";
-    let content = `
-      <p>Hi ${name},</p>
-      <p>Please <a href="http://localhost:5000/api/auth/mail-verification?token=${authToken}">click here</a> to verify your mail.</p>
-    `;
+    const authToken = jwt.sign(payload, jwt_secret);
 
     // 3. Update User with Token (Using Await and Correct Parameter Array)
     await db.execute("UPDATE users SET token=? WHERE email = ?", [
@@ -38,15 +94,11 @@ exports.register = async (req, res) => {
       email,
     ]);
 
-    // 4. Send the Mail
-    await sendmail(email, mailSubject, content);
-
     res.status(200).json({
       authToken,
-      message: "Signup successful, verification email sent.",
+      message: "Signup successful.",
     });
   } catch (error) {
-    console.error("Signup Error: ", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -73,14 +125,9 @@ exports.login = async (req, res) => {
     const { authToken } = jwt.sign(payload, jwt_secret, {
       expiresIn: "24h",
     });
-    // res.send({
-    //   authToken,
-    //   // user: { id: user.id, name: user.name, email: user.email },
-    //   //message: "Login successful",
-    // });
+
     res.status(200).json({ authToken, message: "login seccessful" });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "server error" });
   }
 };
@@ -90,14 +137,62 @@ exports.getuser = async (req, res) => {
     const userId = req.user.id;
     const [rows] = await db.execute(
       "SELECT id , name,email,created_at FROM users WHERE id =? ",
-      [userId]
+      [userId],
     );
     if (rows.length === 0) {
       return res.status(404).send("user not found");
     }
-    res.send(rows[0], user);
+    res.json(rows[0]);
   } catch (error) {
-    console.log(error);
     res.status(401).send({ error: "server error" });
+  }
+};
+
+exports.getOtpForForgetPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const [rows] = await db.execute("SELECT id FROM users WHERE email= ?", [
+      email,
+    ]);
+    if (rows.length === 0)
+      return res
+        .status(200)
+        .json({ message: "If Email is registered, an OTP has been sent " });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+    const expires_in = new Date(Date.now() + 5 * 60000);
+    let content = `<p> Your Otp for reset Your Password for iNoteBook is ${otp} </p>`;
+    await db.execute(
+      "REPLACE INTO otp_verification(email , otp, expires_in) VALUES (?,?,?)",
+      [email, hashedOtp, expires_in],
+      [email],
+    );
+    sendMail(email, "Password Reset Code", content);
+    res
+      .status(200)
+      .json({ message: "Otp is successfully sent ! Kindly check your email" });
+  } catch (error) {
+    res.status(400).json({ message: "Internal Server Error" });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  const err = validationResult(req);
+  if (!err.isEmpty()) {
+    return res.status(400).json({ err: err.array() });
+  }
+  const { newPassword, token } = req.body;
+  try {
+    const decoded = jwt.verify(token, jwt_secret);
+    const email = decoded.email;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    await db.execute("UPDATE users SET password = ? WHERE email = ? ", [
+      hashedPassword,
+      email,
+    ]);
+    res.status(200).json({ message: "Password is Changed Successfully " });
+  } catch (error) {
+    res.status(400).json({ error: " internal Error" });
   }
 };
