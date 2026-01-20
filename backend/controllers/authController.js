@@ -122,7 +122,7 @@ exports.login = async (req, res) => {
         id: user.id,
       },
     };
-    const { authToken } = jwt.sign(payload, jwt_secret, {
+    const  authToken  = jwt.sign(payload, jwt_secret, {
       expiresIn: "24h",
     });
 

@@ -27,9 +27,10 @@ router.post(
 router.post("/verifyOtp", verifyOtp);
 //Route 1: api:localhost:5000/api/auth/signup
 router.post("/signup", validateRegistration, register);
-// Route 2 : /api/auth/login
+
 router.post("/forgetpassword", getOtpForForgetPassword);
-router.post("/changepassword", changepasswordvalidation,changePassword);
+router.post("/changepassword", changepasswordvalidation, changePassword);
+// Route 2 : /api/auth/login
 router.post(
   "/login",
   [
