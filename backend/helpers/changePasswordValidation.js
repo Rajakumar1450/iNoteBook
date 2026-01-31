@@ -1,12 +1,6 @@
 const { body } = require("express-validator");
-const validateRegistration = [
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("name is required")
-    .isLength({ min: 3 })
-    .withMessage("name should have 3 letters"),
-  body("password")
+const changePasswordvalidation = [
+  body("newPassword")
     .isStrongPassword({
       minLength: 8,
       minLowercase: 1,
@@ -22,10 +16,10 @@ const validateRegistration = [
     .notEmpty()
     .withMessage("confirm password is required")
     .custom((value, { req }) => {
-      if (value !== req.body.password) {
+      if (value !== req.body.newPassword) {
         throw new Error("password and confirm password do not match");
       }
       return true;
     }),
 ];
-module.exports = validateRegistration;
+module.exports = changePasswordvalidation;

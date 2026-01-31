@@ -6,7 +6,7 @@ const fetchuser = (req, res, next) => {
   const token = req.header("auth-token");
   if (!token) {
     return res.status(401).send("access denied");
-  }
+  };
   try {
     const data = jwt.verify(token, jwt_secret);
     req.user = data.user;
