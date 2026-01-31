@@ -1,12 +1,13 @@
+const{ env } = require("../env");
 const mysql = require("mysql2");
-const dotenv = require("dotenv");
-dotenv.config();
+// const dotenv = require("dotenv"); no need
+
 const pool = mysql.createPool({
-  host: process.env.HOST,
-  port: process.env.PORT,
-  user: process.env.USER,
-  password: process.env.PASSWORD || "",
-  database: process.env.DATABASE,
+  host: env.HOST,
+  port: env.PORT,
+  user: env.DB_USER,
+  password: env.PASSWORD || "",
+  database: env.DATABASE,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

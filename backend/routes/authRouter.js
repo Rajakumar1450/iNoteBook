@@ -14,6 +14,7 @@ const {
   verifyOtp,
   getOtpForForgetPassword,
   changePassword,
+  googlesignin,
 } = require("../controllers/authController");
 
 dotenv.config();
@@ -39,5 +40,6 @@ router.post(
   ],
   login,
 );
+router.post("/googleLogin", googlesignin);
 router.post("/getuser", fetchuser, getuser);
 module.exports = router;

@@ -4,8 +4,10 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const sendMail = require("../helpers/sendMail");
 const { validationResult } = require("express-validator");
+const { OAuth2Client } = require("google-auth-library");
 dotenv.config();
 const jwt_secret = process.env.JWT_SECRET;
+
 exports.getOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -17,7 +19,7 @@ exports.getOtp = async (req, res) => {
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otp, 10);
-    const expires_in = new Date(Date.now() + 5 * 60000);
+    const expires_in = new Date(Date.now() + 1 * 60000);
     await db.execute(
       "REPLACE INTO otp_verification (email , otp , expires_in) VALUES (?,?,?)",
       [email, hashedOtp, expires_in],
@@ -32,6 +34,7 @@ exports.getOtp = async (req, res) => {
     res.status(400).json({ error: "Internal Error" });
   }
 };
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -122,7 +125,7 @@ exports.login = async (req, res) => {
         id: user.id,
       },
     };
-    const  authToken  = jwt.sign(payload, jwt_secret, {
+    const authToken = jwt.sign(payload, jwt_secret, {
       expiresIn: "24h",
     });
 
@@ -194,5 +197,41 @@ exports.changePassword = async (req, res) => {
     res.status(200).json({ message: "Password is Changed Successfully " });
   } catch (error) {
     res.status(400).json({ error: " internal Error" });
+  }
+};
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+exports.googlesignin = async (req, res) => {
+  const { token } = req.body;
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { name, email } = ticket.getPayload();
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+    let user;
+    // this is case for new user Means Register this user in our App
+    if (rows.length === 0) {
+      const [result] = await db.execute(
+        "INSERT INTO users(name , email , password) VALUES (?,?,?) ",
+        [name, email, null], // we are keeping the password null beacause this user is getting verified by the Google itSelf
+      );
+      user = { id: result.insertId, email: email };
+    } else {
+      user = rows[0];
+    }
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+    const Authtoken = jwt.sign(payload, jwt_secret, {
+      expiresIn: "24h",
+    });
+    res.status(200).json({ Authtoken, message: "Google Login Successfull " });
+  } catch (error) {
+    res.status(500).json({ error: "Internal error" });
   }
 };

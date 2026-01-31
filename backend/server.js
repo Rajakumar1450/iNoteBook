@@ -1,6 +1,9 @@
 const express = require("express");
 const pool = require("./config/db");
+const cors = require("cors");
+const env = require("./env");
 const app = express();
+app.use(cors());
 app.use(express.json()); //this is middleware function which is necessary for getting any request object in backend on some end point
 
 const PORT = 5000;

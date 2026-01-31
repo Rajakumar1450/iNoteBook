@@ -96,7 +96,7 @@ exports.fetchnote = async (req, res) => {
     );
     res.json(notes);
   } catch (error) {
-    res.status(500).send("Internal Server Error");
+    +res.status(500).send("Internal Server Error");
   }
 };
 
