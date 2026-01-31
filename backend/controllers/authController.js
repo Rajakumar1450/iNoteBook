@@ -19,10 +19,10 @@ exports.getOtp = async (req, res) => {
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otp, 10);
-    const expires_in = new Date(Date.now() + 1 * 60000);
+    
     await db.execute(
-      "REPLACE INTO otp_verification (email , otp , expires_in) VALUES (?,?,?)",
-      [email, hashedOtp, expires_in],
+      "REPLACE INTO otp_verification (email , otp , expires_in) VALUES (?,?,DATE_ADD(NOW(), INTERVAL 1 MINUTE))",
+      [email, hashedOtp],
     );
     let content = `<p>Hii your OTP For registering to the Inotebook the digital cloud based notebook in your Hand is ${otp} </p>
   <p>Kindly <b> Do Not </b> Share This OTP to anyone`;

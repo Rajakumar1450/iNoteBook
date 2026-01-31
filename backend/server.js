@@ -1,22 +1,42 @@
 const express = require("express");
 const pool = require("./config/db");
 const cors = require("cors");
-const env = require("./env");
+const initCronJobs = require("./Jobs/cronJob");
+initCronJobs();
 const app = express();
+const rateLimit = require("express-rate-limit");
 app.use(cors());
-app.use(express.json()); //this is middleware function which is necessary for getting any request object in backend on some end point
+// Only allow JSON bodies up to 10kb
+app.use(express.json({ limit: "10kb" }));
+
+// Only allow URL-encoded bodies up to 10kb
+app.use(express.urlencoded({ extended: true, limit: "10kb" })); //this is middleware function which is necessary for getting any request object in backend on some end point
 
 const PORT = 5000;
 //this is port for the express server and we can't run the express and the database on the same port
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "To many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use(limiter);
 async function startServer() {
   //since we are using the promise and pool then we have to make a syncronised function to createconneection we can't simply put pool.getConnection;
   try {
     const connection = await pool.getConnection();
     console.log("Connected to MySQL database on port 3307");
     connection.release();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
+    // 1. Headers Timeout: Stop "Slowloris" attacks
+    // If headers aren't received within 60s, kill it.
+    server.headersTimeout = 10000;
+    // 2. Request Timeout: Stop hanging logic
+    // If the app takes more than 2 minutes to respond, close the connection.
+    server.requestTimeout = 120000;
   } catch (err) {
     console.error("Database connection failed:", err.message);
   }
