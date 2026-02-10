@@ -1,12 +1,13 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
+// const dotenv = require("dotenv");
 const sendMail = require("../helpers/sendMail");
 const { validationResult } = require("express-validator");
 const { OAuth2Client } = require("google-auth-library");
-dotenv.config();
-const jwt_secret = process.env.JWT_SECRET;
+const { env } = require("../env");
+// dotenv.config();
+const jwt_secret = env.JWT_SECRET;
 
 exports.getOtp = async (req, res) => {
   try {
@@ -19,13 +20,14 @@ exports.getOtp = async (req, res) => {
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otp, 10);
-    
+
     await db.execute(
       "REPLACE INTO otp_verification (email , otp , expires_in) VALUES (?,?,DATE_ADD(NOW(), INTERVAL 1 MINUTE))",
       [email, hashedOtp],
     );
     let content = `<p>Hii your OTP For registering to the Inotebook the digital cloud based notebook in your Hand is ${otp} </p>
-  <p>Kindly <b> Do Not </b> Share This OTP to anyone`;
+  <p>Kindly <b> Do Not </b> Share This OTP to anyone 
+  Expires in 1 minutes `;
     sendMail(email, "verify Your Mail", content);
     res
       .status(200)

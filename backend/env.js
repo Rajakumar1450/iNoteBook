@@ -32,7 +32,7 @@ const envSchema = z.object({
   // Server configuration
   PORT: z.coerce.number().positive().default(3000),
   HOST: z.string().default("localhost"),
-
+  BACKENDPORT: z.coerce.number().positive().default(5000),
   // Database
   DATABASE: z.string().min(1, "Database name is required"),
   DB_USER: z.string().default("root"),
@@ -67,7 +67,6 @@ try {
   }
   throw error;
 }
-
 
 module.exports = {
   env,

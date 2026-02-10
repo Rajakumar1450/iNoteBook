@@ -2,17 +2,33 @@ const express = require("express");
 const pool = require("./config/db");
 const cors = require("cors");
 const initCronJobs = require("./Jobs/cronJob");
+const helmet = require("helmet");
+const { env, isTestEnv } = require("./env");
+const morgan = require("morgan");
 initCronJobs();
 const app = express();
+app.use(helmet());
+//helmet hide our tech stack and set secure HTTP Headers
 const rateLimit = require("express-rate-limit");
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:3000",
+};
+app.use(cors(corsOptions)); // allow only 'http://localhost:3000' to access our api server;
 // Only allow JSON bodies up to 10kb
 app.use(express.json({ limit: "10kb" }));
 
 // Only allow URL-encoded bodies up to 10kb
-app.use(express.urlencoded({ extended: true, limit: "10kb" })); //this is middleware function which is necessary for getting any request object in backend on some end point
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+//this is middleware function which is necessary for getting any request object in backend on some end point
 
-const PORT = 5000;
+app.use(
+  morgan("dev", {
+    skip: () => {
+      isTestEnv();
+    },
+  }),
+);
+const PORT = env.BACKENDPORT;
 //this is port for the express server and we can't run the express and the database on the same port
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,

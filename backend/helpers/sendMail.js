@@ -1,8 +1,7 @@
 const nodemailer = require("nodemailer");
-const dotenv = require("dotenv");
-dotenv.config();
-const SMTP_EMAIL = process.env.SMTP_MAIL;
-const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+const { env } = require("../env");
+const SMTP_EMAIL = env.SMTP_MAIL;
+const SMTP_PASSWORD = env.SMTP_PASSWORD;
 const sendMail = async (email, emailsubject, content) => {
   try {
     const transport = nodemailer.createTransport({

@@ -1,5 +1,6 @@
 const express = require("express");
 const fetchuser = require("../middleware/fetchuser");
+const { z } = require("zod");
 const {
   fetchallnotes,
   addnotes,
@@ -8,7 +9,10 @@ const {
   fetchnote,
   editnotes,
 } = require("../controllers/notesController");
-
+const { validateParams } = require("../middleware/validation");
+const validateQuerySchema = z.object({
+  id: z.number().min(1, "invalid Id Format"),
+});
 const router = express.Router();
 //Route 1: api:localhost:5000/api/auth/signup
 router.put("/addnotes", fetchuser, addnotes);
@@ -21,5 +25,5 @@ router.delete("/deletenotes", fetchuser, deletenotes);
 // Route 5: Delete ALL Notes using: DELETE "/api/notes/deleteallnotes"
 router.delete("/deleteallnotes", fetchuser, deleteallnotes);
 // Route 6: Update a Note using: PUT "/api/notes/updatenote/:id"
-router.put("/updatenote/:id", fetchuser, editnotes);
+router.put("/updatenote/:id",validateParams(validateQuerySchema), fetchuser, editnotes);
 module.exports = router;

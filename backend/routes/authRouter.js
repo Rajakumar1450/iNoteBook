@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { body } = require("express-validator");
-
-const dotenv = require("dotenv");
+const { z } = require("zod");
 const fetchuser = require("../middleware/fetchuser");
 const changepasswordvalidation = require("../helpers/changePasswordValidation");
 const validateRegistration = require("../helpers/validationChecks");
@@ -16,8 +15,11 @@ const {
   changePassword,
   googlesignin,
 } = require("../controllers/authController");
-
-dotenv.config();
+const { validateBody } = require("../middleware/validation");
+const verifyOtpSchema = z.object({
+  email: z.string().email("invalid email format"),
+  otp: z.number().min(6, "please Enter 6 digit Otp"),
+});
 //Route 1: api:localhost:5000/api/auth/signup
 router.post(
   "/getOtp",
@@ -25,7 +27,7 @@ router.post(
   getOtp,
 );
 //Route 1: api:localhost:5000/api/auth/verifyOtp
-router.post("/verifyOtp", verifyOtp);
+router.post("/verifyOtp",validateBody(verifyOtpSchema) ,verifyOtp);
 //Route 1: api:localhost:5000/api/auth/signup
 router.post("/signup", validateRegistration, register);
 
