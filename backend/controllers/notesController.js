@@ -45,11 +45,7 @@ exports.deletenotes = async (req, res) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       res.status(400).json({ error: "No Notes is Selected For Deletion!" });
     }
-    const placeholder = ids
-      .map(() => {
-        "?";
-      })
-      .join(",");
+    const placeholder = ids.map(() => "?").join(",");
     const [result] = await db.execute(
       `DELETE FROM notes WHERE user_id = ?  AND id IN (${placeholder})`,
       [user_Id, ...ids],
@@ -96,7 +92,7 @@ exports.fetchnote = async (req, res) => {
     );
     res.json(notes);
   } catch (error) {
-    +res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error");
   }
 };
 
