@@ -3,7 +3,7 @@ const pool = require("./config/db");
 const cors = require("cors");
 const initCronJobs = require("./Jobs/cronJob");
 const helmet = require("helmet");
-const { env, isTestEnv } = require("./env");
+const { env, isTestEnv } = require("./config/env");
 const morgan = require("morgan");
 initCronJobs();
 const app = express();

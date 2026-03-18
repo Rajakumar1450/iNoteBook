@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const sendMail = require("../helpers/sendMail");
 const { validationResult } = require("express-validator");
 const { OAuth2Client } = require("google-auth-library");
-const { env } = require("../env");
+const { env } = require("../config/env");
 // dotenv.config();
 const jwt_secret = env.JWT_SECRET;
 
@@ -50,14 +50,11 @@ exports.verifyOtp = async (req, res) => {
     const { otp: savedOtp, expires_in } = rows[0];
     if (new Date() > new Date(expires_in))
       return res.status(400).json({ message: "Otp Expired!" });
-    const ismatch = await bcrypt.compare(otp, savedOtp);
+    const ismatch = await bcrypt.compare(otp.toString(), savedOtp);
     if (!ismatch)
       return res.status(400).json({ message: "OTP is NOT Matched" });
     const token = jwt.sign({ email }, jwt_secret, { expiresIn: "5m" });
     await db.execute("DELETE FROM otp_verification WHERE email = ?", [email]);
-    await db.execute("UPDATE users SET is_verified = 1 WHERE email = ?", [
-      email,
-    ]);
     res.status(200).json({ token, message: "Email Verified successfully!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -87,7 +84,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 1. Insert User
-    const sql = "INSERT INTO users(name, email, password) VALUES (?, ?, ?)";
+    const sql = "INSERT INTO users(name, email, password, is_verified) VALUES (?, ?, ?, 1)";
     const [result] = await db.execute(sql, [name, email, hashedPassword]);
 
     const payload = { user: { id: result.insertId } };
@@ -170,7 +167,6 @@ exports.getOtpForForgetPassword = async (req, res) => {
     await db.execute(
       "REPLACE INTO otp_verification(email , otp, expires_in) VALUES (?,?,?)",
       [email, hashedOtp, expires_in],
-      [email],
     );
     sendMail(email, "Password Reset Code", content);
     res
@@ -189,19 +185,30 @@ exports.changePassword = async (req, res) => {
   const { newPassword, token } = req.body;
   try {
     const decoded = jwt.verify(token, jwt_secret);
-    const email = decoded.email;
+    
+    let query, queryParam;
+    if (decoded.email) {
+      query = "UPDATE users SET password = ? WHERE email = ? ";
+      queryParam = decoded.email;
+    } else if (decoded.user && decoded.user.id) {
+      query = "UPDATE users SET password = ? WHERE id = ? ";
+      queryParam = decoded.user.id;
+    } else {
+      return res.status(400).json({ error: "Invalid token structure" });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    await db.execute("UPDATE users SET password = ? WHERE email = ? ", [
+    await db.execute(query, [
       hashedPassword,
-      email,
+      queryParam,
     ]);
     res.status(200).json({ message: "Password is Changed Successfully " });
   } catch (error) {
     res.status(400).json({ error: " internal Error" });
   }
 };
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 exports.googlesignin = async (req, res) => {
   const { token } = req.body;
   try {
@@ -209,7 +216,7 @@ exports.googlesignin = async (req, res) => {
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const { name, email } = ticket.getPayload();
+    const { name, email, picture, sub } = ticket.getPayload();
     const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
       email,
     ]);
@@ -217,12 +224,19 @@ exports.googlesignin = async (req, res) => {
     // this is case for new user Means Register this user in our App
     if (rows.length === 0) {
       const [result] = await db.execute(
-        "INSERT INTO users(name , email , password) VALUES (?,?,?) ",
-        [name, email, null], // we are keeping the password null beacause this user is getting verified by the Google itSelf
+        "INSERT INTO users(name, email, password, is_verified, image, auth_provider, oauth_id) VALUES (?,?,?, 1, ?, 'google', ?)",
+        [name, email, null, picture, sub],
       );
       user = { id: result.insertId, email: email };
     } else {
       user = rows[0];
+      // update existing user's oauth info if not present
+      if (!user.oauth_id || user.auth_provider !== 'google') {
+        await db.execute(
+          "UPDATE users SET is_verified = 1, image = COALESCE(image, ?), auth_provider = 'google', oauth_id = ? WHERE id = ?",
+          [picture, sub, user.id]
+        );
+      }
     }
     const payload = {
       user: {

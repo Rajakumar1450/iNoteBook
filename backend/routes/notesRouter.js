@@ -11,7 +11,7 @@ const {
 } = require("../controllers/notesController");
 const { validateParams } = require("../middleware/validation");
 const validateQuerySchema = z.object({
-  id: z.number().min(1, "invalid Id Format"),
+  id: z.coerce.number().min(1, "invalid Id Format"),
 });
 const router = express.Router();
 //Route 1: api:localhost:5000/api/auth/signup
