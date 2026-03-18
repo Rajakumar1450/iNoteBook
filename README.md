@@ -26,7 +26,14 @@ Data Isolation: Strict SQL logic ensures users can only read, edit, or delete no
 💻 Tech Stack
 
 Frontend 
-``` YET TO WORK ON THE FRONTEND ```
+Frontend Library: React.js (Hooks: useState, useEffect)
+
+Routing: React Router DOM (v6+) — Utilizing HashRouter for seamless deployment on GitHub Pages.
+
+Styling: CSS3 & Bootstrap (Responsive Design)
+
+Language: JavaScript (ES6+)
+
 
 Backend
 Node.js & Express.js - Server environment and REST API framework.
