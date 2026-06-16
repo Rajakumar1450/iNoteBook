@@ -53,6 +53,10 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["error", "warn", "info", "debug", "trace"])
     .default(isProduction ? "info" : "debug"),
+
+  CLOUD_NAME: z.string().default(""),
+  API_KEY: z.string().default(""),
+  API_SECRET_KEY: z.string().default(""),
 });
 
 // 4. Parse and Validate

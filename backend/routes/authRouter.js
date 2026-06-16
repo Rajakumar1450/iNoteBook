@@ -27,7 +27,7 @@ router.post(
   getOtp,
 );
 //Route 1: api:localhost:5000/api/auth/verifyOtp
-router.post("/verifyOtp",validateBody(verifyOtpSchema) ,verifyOtp);
+router.post("/verifyOtp", validateBody(verifyOtpSchema), verifyOtp);
 //Route 1: api:localhost:5000/api/auth/signup
 router.post("/signup", validateRegistration, register);
 

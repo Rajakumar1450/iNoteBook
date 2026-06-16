@@ -29,6 +29,10 @@ CREATE TABLE
 
 ALTER TABLE users MODIFY password VARCHAR(255) NULL;
 
-ALTER TABLE users 
-ADD auth_provider VARCHAR(50) DEFAULT 'local', 
-ADD oauth_id VARCHAR(255) DEFAULT NULL;
+ALTER TABLE users ADD auth_provider VARCHAR(50) DEFAULT 'local',
+ADD oauth_id VARCHAR(255) DEFAULT NULL,
+ADD failedLoginAttepts NUMBER DEFAULT 0,
+ADD requiredOtp boolean DEFAULT FALSE,
+ADD avtar_url varchar(500) DEFAULT NULL,
+ADD image_name varchar(500) DEFAULT NULL,
+;
