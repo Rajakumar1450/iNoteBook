@@ -34,5 +34,24 @@ ADD oauth_id VARCHAR(255) DEFAULT NULL,
 ADD failedLoginAttepts NUMBER DEFAULT 0,
 ADD requiredOtp boolean DEFAULT FALSE,
 ADD avtar_url varchar(500) DEFAULT NULL,
-ADD image_name varchar(500) DEFAULT NULL,
-;
+ADD image_name varchar(500) DEFAULT NULL;
+
+CREATE TABLE
+  posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    caption TEXT, -- What the user wrote about the photos
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  );
+
+CREATE TABLE
+  post_media (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    media_url VARCHAR(255) NOT NULL, -- The Cloudinary URL
+    media_id VARCHAR(255) NOT NULL, -- The Cloudinary Public ID
+    media_type ENUM ('image', 'video') NOT NULL, -- Is it a photo or an mp4?
+    media_order INT NOT NULL, -- To keep the carousel in the exact order they uploaded it (1, 2, 3...)
+    FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+  );

@@ -1,19 +1,23 @@
 const multer = require("multer");
 const path = require("path");
 
-const imageStorage = multer.diskStorage({
+const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+    if (
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/png" ||
+      file.mimetype === "video/mp4"
+    ) {
       cb(null, path.join(__dirname, "../files"));
     } else {
-      cb({ message: "This file is not an image file" }, false);
+      cb({ message: "This file is not valid" }, false);
     }
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
 module.exports = {
-  imageUpload: multer({ storage: imageStorage }),
+  Upload: multer({ storage }),
 };

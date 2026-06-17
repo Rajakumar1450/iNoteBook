@@ -43,11 +43,11 @@ app.get("/", (req, res) => {
 const notes = require("./routes/notesRouter");
 const auth = require("./routes/authRouter");
 const errorRoutes = require("./routes/errorRouter");
-const imageRoutes = require("./routes/imageUploadRouter");
+const uploadRoutes = require("./routes/uploads");
 
 app.use("/api/notes", notes);
 app.use("/api/auth", auth);
-app.use("/api/image", imageRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 // Global Error Handler (Must be the last app.use)
 app.use(errorRoutes);

@@ -11,7 +11,7 @@ module.exports = {
           .json({ message: "sorry there was no file uploaded..." });
       }
       const imageName = req.files[0].originalname;
-      const tempImageUrl = req.files[0].path;
+      const tempImageUrl = req.files[0].path; //this is only the the path of the image
       const checksql = "select * from users where image_name = ?";
       const [existingImage] = await db.execute(checksql, [imageName]);
       if (existingImage.length > 0) {
@@ -22,16 +22,16 @@ module.exports = {
       }
       const result = await cloud.uploads(tempImageUrl);
       const imageId = result.id;
-      const imageUrl = result.url;
-      const email = req.body.email;
+      const imageUrl = result.url; //this is the actual url that is going to store in the database
+      const userId = req.user.id; //pulled from fetchuser our middleware
 
       const insertSql =
-        "UPDATE users SET image_id = ? , image_name =? , avatar_url = ? WHERE email=? ";
+        "UPDATE users SET image_id = ? , image_name =? , avatar_url = ? WHERE id=? ";
       const [insertResult] = await db.execute(insertSql, [
         imageId,
         imageName,
         imageUrl,
-        email,
+        userId,
       ]);
 
       return res.status(200).json({
@@ -41,7 +41,7 @@ module.exports = {
           imageName,
           imageUrl,
           imageId,
-          email,
+          userId,
         },
       });
     } catch (error) {
