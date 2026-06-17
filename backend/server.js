@@ -5,66 +5,82 @@ const initCronJobs = require("./Jobs/cronJob");
 const helmet = require("helmet");
 const { env, isTestEnv } = require("./config/env");
 const morgan = require("morgan");
-initCronJobs();
-const app = express();
-app.use(helmet());
-//helmet hide our tech stack and set secure HTTP Headers
 const rateLimit = require("express-rate-limit");
+
+const app = express();
+
+// 1. GLOBAL SECURITY & UTILITY MIDDLEWARE
+app.use(helmet());
+
 const corsOptions = {
   origin: "http://localhost:3000",
 };
-app.use(cors(corsOptions)); // allow only 'http://localhost:3000' to access our api server;
-// Only allow JSON bodies up to 10kb
-app.use(express.json({ limit: "10kb" }));
+app.use(cors(corsOptions));
 
-// Only allow URL-encoded bodies up to 10kb
+app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
-//this is middleware function which is necessary for getting any request object in backend on some end point
 
 app.use(
   morgan("dev", {
-    skip: () => {
-      isTestEnv();
-    },
+    skip: () => isTestEnv(), // ✅ Fixed: Correct implicit return
   }),
 );
-const PORT = env.BACKENDPORT;
-//this is port for the express server and we can't run the express and the database on the same port
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: "To many requests from this IP, please try again after 15 minutes",
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: "Too many requests from this IP, please try again after 15 minutes", // ✅ Fixed: Typo
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use(limiter);
-async function startServer() {
-  //since we are using the promise and pool then we have to make a syncronised function to createconneection we can't simply put pool.getConnection;
-  try {
-    const connection = await pool.getConnection();
-    console.log("Connected to MySQL database on port 3307");
-    connection.release();
-    const server = app.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
-    });
-    // 1. Headers Timeout: Stop "Slowloris" attacks
-    // If headers aren't received within 60s, kill it.
-    server.headersTimeout = 10000;
-    // 2. Request Timeout: Stop hanging logic
-    // If the app takes more than 2 minutes to respond, close the connection.
-    server.requestTimeout = 120000;
-  } catch (err) {
-    console.error("Database connection failed:", err.message);
-  }
-}
 
-startServer();
+// 2. ROUTE REGISTRATION (Must happen before server boots)
 app.get("/", (req, res) => {
   res.send("Server is running!");
 });
 
 const notes = require("./routes/notesRouter");
 const auth = require("./routes/authRouter");
+const errorRoutes = require("./routes/errorRouter");
+const uploadRoutes = require("./routes/uploads");
+
 app.use("/api/notes", notes);
 app.use("/api/auth", auth);
-// app.use("/",webRoute);
+app.use("/api/uploads", uploadRoutes);
+
+// Global Error Handler (Must be the last app.use)
+app.use(errorRoutes);
+
+// 3. SERVER BOOTSTRAPPER
+const PORT = env.BACKENDPORT;
+
+async function startServer() {
+  try {
+    // Verify database connection first
+    const connection = await pool.getConnection();
+    console.log("Connected to MySQL database successfully.");
+    connection.release();
+
+    // Start background jobs safely after DB is verified
+    initCronJobs();
+
+    // Start listening for HTTP requests
+    const server = app.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+
+    // Timeouts for Slowloris and hanging requests
+    server.headersTimeout = 10000;
+    server.requestTimeout = 120000;
+  } catch (err) {
+    console.error(
+      "Database connection failed. Server shutting down:",
+      err.message,
+    );
+    process.exit(1); // Exit process if the core database cannot be reached
+  }
+}
+
+// Start everything safely
+startServer();

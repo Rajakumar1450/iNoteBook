@@ -84,7 +84,8 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 1. Insert User
-    const sql = "INSERT INTO users(name, email, password, is_verified) VALUES (?, ?, ?, 1)";
+    const sql =
+      "INSERT INTO users(name, email, password, is_verified) VALUES (?, ?, ?, 1)";
     const [result] = await db.execute(sql, [name, email, hashedPassword]);
 
     const payload = { user: { id: result.insertId } };
@@ -115,9 +116,12 @@ exports.login = async (req, res) => {
       res.status(400).json("Either email or password is not correct");
     }
     const user = rows[0];
+
     const ismatch = await bcrypt.compare(password, user.password);
+
     if (!ismatch) {
       res.status(400).json("invalid login credentials");
+      //if a hacker tries to put password many times and failed you can lock them or you can send a email or message to the user to inform that someone is trying to login from with that location
     }
     const payload = {
       user: {
@@ -185,7 +189,7 @@ exports.changePassword = async (req, res) => {
   const { newPassword, token } = req.body;
   try {
     const decoded = jwt.verify(token, jwt_secret);
-    
+
     let query, queryParam;
     if (decoded.email) {
       query = "UPDATE users SET password = ? WHERE email = ? ";
@@ -199,16 +203,15 @@ exports.changePassword = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    await db.execute(query, [
-      hashedPassword,
-      queryParam,
-    ]);
+    await db.execute(query, [hashedPassword, queryParam]);
     res.status(200).json({ message: "Password is Changed Successfully " });
   } catch (error) {
     res.status(400).json({ error: " internal Error" });
   }
 };
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+
+
 exports.googlesignin = async (req, res) => {
   const { token } = req.body;
   try {
@@ -231,10 +234,10 @@ exports.googlesignin = async (req, res) => {
     } else {
       user = rows[0];
       // update existing user's oauth info if not present
-      if (!user.oauth_id || user.auth_provider !== 'google') {
+      if (!user.oauth_id || user.auth_provider !== "google") {
         await db.execute(
           "UPDATE users SET is_verified = 1, image = COALESCE(image, ?), auth_provider = 'google', oauth_id = ? WHERE id = ?",
-          [picture, sub, user.id]
+          [picture, sub, user.id],
         );
       }
     }

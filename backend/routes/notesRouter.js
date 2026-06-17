@@ -14,16 +14,16 @@ const validateQuerySchema = z.object({
   id: z.coerce.number().min(1, "invalid Id Format"),
 });
 const router = express.Router();
-//Route 1: api:localhost:5000/api/auth/signup
-router.put("/addnotes", fetchuser, addnotes);
+router.use(fetchuser); //Route 1: api:localhost:5000/api/auth/signup
+router.put("/addnotes", addnotes);
 //Route 2: api:localhost:5000/api/notes/fetchallnotes
-router.get("/fetchallnotes", fetchuser, fetchallnotes);
+router.get("/fetchallnotes", fetchallnotes);
 // Route 3: Fetch SELECTED Notes using: GET "/api/notes/fetchnote"
-router.get("/fetchnote/", fetchuser, fetchnote);
+router.get("/fetchnote/", fetchnote);
 // Route 4: Bulk Delete Notes using: DELETE "/api/notes/deletenotes"
-router.delete("/deletenotes", fetchuser, deletenotes);
+router.delete("/deletenotes", deletenotes);
 // Route 5: Delete ALL Notes using: DELETE "/api/notes/deleteallnotes"
-router.delete("/deleteallnotes", fetchuser, deleteallnotes);
+router.delete("/deleteallnotes", deleteallnotes);
 // Route 6: Update a Note using: PUT "/api/notes/updatenote/:id"
-router.put("/updatenote/:id",validateParams(validateQuerySchema), fetchuser, editnotes);
+router.put("/updatenote/:id", validateParams(validateQuerySchema), editnotes);
 module.exports = router;
